@@ -463,8 +463,8 @@ label {
             <p><span data-i18n="remain">Yo-kai que quedan por eliminar antes de encontrar al siguiente favorito: </span><span id="remaining"></span></p>
             
             <p><span data-i18n="progress">Progreso hacia el próximo favorito: </span><span id="progress-bar"><span></span></span></p>
-            </div>
-            </div>
+        </div>
+    </div>
 
     <div id="secondary">
         <ul class="tabs">
@@ -682,6 +682,8 @@ label {
             <p style="font-weight: bold; text-align: center; margin-top: 0px; font-size: 1.15em; color: #58F;"><span data-i18n="foundThem">¿Podrás descubrirlos a todos?</span></p>
         
     </div>
+</div>
+</div>
 
 <script>
 const translations = {
@@ -4865,9 +4867,9 @@ var items = [
 {id: 'robomaton', name: 'Robomatón', image: 'Yo-kai/Robusta/Robomatón.png', role: 'robusto', recurring: false, tribe: 'objeto', attribute: 'tierra', rank: 'rangob', blaster: 'tanque', game: 'yw4', lightside: true},
 {id: 'robotitan2', name: 'Robotitán', image: 'Yo-kai/Robusta/Robotitán.png', role: 'robusto', recurring: true, tribe: 'objeto', attribute: 'tierra', rank: 'rangos', blaster: 'tanque', game: 'yw4', shadowside: true},
 {id: 'robotitan', name: 'Robotitán', image: 'Yo-kai/Jefes/Robotitán.png', role: 'robusto', recurring: true, tribe: 'objeto', attribute: 'tierra', rank: 'rangoss', blaster: 'tanque', game: 'yw4', shadowside: true, obtainable: false, boss: true},
-{id: 'autolata', name: 'Autólata', image: 'Yo-kai/Otros/Autólata.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'viento', rank: 'rangozz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
-{id: 'autoreo', name: 'Autóreo', image: 'Yo-kai/Otros/Autóreo.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'relampago', rank: 'rangozzz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
-{id: 'autobix', name: 'Autóbix', image: 'Yo-kai/Otros/Autóbix.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'luz', rank: 'rangouz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
+{id: 'autolata', name: 'Autólata', image: 'Yo-kai/Jefes/Autólata.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'viento', rank: 'rangozz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
+{id: 'autoreo', name: 'Autóreo', image: 'Yo-kai/Jefes/Autóreo.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'relampago', rank: 'rangozzz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
+{id: 'autobix', name: 'Autóbix', image: 'Yo-kai/Jefes/Autóbix.png', role: 'oscuro', recurring: true, tribe: 'rencoroso', attribute: 'luz', rank: 'rangouz', blaster: 'comando', game: 'yw4', obtainable: false, boss: true},
 {id: 'ladydelicia', name: 'Lady Delicia', image: 'Yo-kai/Otros/Lady_Delicia.png', role: 'amable', recurring: true, tribe: 'guardian', attribute: 'restauracion', rank: 'rangoz', blaster: 'sanador', game: 'yw2', obtainable: false, boss: true, medallium: false},
 {id: 'pezcado', name: 'Pezcado', image: 'Yo-kai/Otros/Pezcado.png', role: 'escurridizo', recurring: true, tribe: 'distraido', attribute: 'fuego', rank: 'rangob', blaster: 'atacante', game: 'yw1', obtainable: false, medallium: false},
 {id: 'pezadilla', name: 'Pezadilla', image: 'Yo-kai/Otros/Pezadilla.png', role: 'escurridizo', recurring: true, tribe: 'distraido', attribute: 'fuego', rank: 'rangoa', blaster: 'atacante', game: 'yw1', obtainable: false, medallium: false},
@@ -5205,6 +5207,84 @@ var pickerUI = new PickerUI(myPicker, {
             obtainableOnly: '#obtainable-only',
             medalliumOnly: '#medallium-only',
             bossOnly: '#boss-only',
+        }
+    },
+    onUpdate: function() {
+        var state = this.picker.state;
+        
+        // --- DETECTOR DE CAMBIO DE FILTROS ---
+        var currentSettingsStr = JSON.stringify(state.settings);
+        if (this.lastSettingsStr !== undefined && this.lastSettingsStr !== currentSettingsStr) {
+            this.roundStartAlive = undefined;
+        }
+        this.lastSettingsStr = currentSettingsStr;
+        
+        // 1. CONTEO REAL 
+        var alive = 0;
+        if (state.arrays.current) alive += state.arrays.current.length;
+        if (state.arrays.evaluating) alive += state.arrays.evaluating.length;
+        if (state.arrays.survived) alive += state.arrays.survived.length;
+        
+        var remainToEliminate = Math.max(0, alive - 1);
+
+        // Actualizamos el número en pantalla
+        var remainElem = document.getElementById('remaining');
+        if (remainElem) remainElem.textContent = remainToEliminate;
+
+        var favoritesCount = state.arrays.favorites ? state.arrays.favorites.length : 0;
+        var $progressBarSpan = $('#progress-bar span');
+        var $progressBarContainer = $('#progress-bar');
+
+        if (this.isAnimatingCelebration) return;
+
+        // 2. DETECCIÓN DE FAVORITO Y ANIMACIÓN FINAL (Efecto POP)
+        if (this.lastFavoritesCount !== undefined && favoritesCount > this.lastFavoritesCount) {
+            var self = this;
+            this.isAnimatingCelebration = true; 
+            this.lastFavoritesCount = favoritesCount;
+
+            if ($progressBarSpan.length) {
+                $progressBarSpan.stop().animate({ width: '100%' }, 250, function() {
+                    $progressBarContainer.css('transform', 'scale(1.15)');
+                    setTimeout(function() {
+                        $progressBarContainer.css('transform', 'scale(1)');
+                        setTimeout(function() {
+                            $progressBarSpan.stop().css('width', '0%');
+                            self.isAnimatingCelebration = false;
+                            self.roundStartAlive = undefined; 
+                            self.onUpdate(); 
+                        }, 200);
+                    }, 200); 
+                });
+            } else {
+                this.isAnimatingCelebration = false;
+            }
+            return;
+        }
+
+        this.lastFavoritesCount = favoritesCount;
+
+        // 3. AVANCE DE LA BARRA
+        if (this.roundStartAlive === undefined || alive > this.roundStartAlive) {
+            this.roundStartAlive = alive;
+        }
+
+        var percentage = 0;
+        if (this.roundStartAlive > 1) {
+            var totalSteps = Math.sqrt(this.roundStartAlive) - 1;
+            var remainingSteps = Math.sqrt(alive) - 1;
+            if (totalSteps > 0) {
+                percentage = ((totalSteps - remainingSteps) / totalSteps) * 100;
+            }
+        }
+        
+        if (remainToEliminate <= 0) percentage = 100;
+        
+        var finalPercentage = Math.floor(Math.min(100, Math.max(0, percentage)));
+
+        // 4. ANIMACIÓN SIMPLE
+        if ($progressBarSpan.length) {
+            $progressBarSpan.stop().animate({ width: finalPercentage + '%' }, 300);
         }
     }
 });
